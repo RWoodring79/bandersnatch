@@ -32,6 +32,7 @@ class Package:
         # This is really only useful for pip 8.0 -> 8.1.1
         self.normalized_name_legacy = pkg_resources.safe_name(name).lower()
         self.mirror = mirror
+        self.releases = dict()
 
     @property
     def json_file(self) -> Path:
@@ -116,6 +117,55 @@ class Package:
 
                     if self.mirror.json_save and not self.json_saved:
                         self.json_saved = self.save_json_metadata(package_info.json())
+
+                    # Convert the keys to PEP 440 Version objects (which can be sorted properly)
+                    ver_list = []
+                    for key in self.releases.keys():
+                        try:
+                            # Convert version string to PEP 440 version object
+                            v = Version(key)
+                        except InvalidVersion:
+                            # If not a PEP 440 Version, attempt to convert based on LegacyVersion format
+                            logger.warning(f"Invalid Version: {key}")
+                            try:
+                                v = LegacyVersion(key)
+                            except InvalidVersion:
+                                # Last resort, just make a LegacyVersion object based on the string
+                                logger.warning(f"Invalid Legacy Version: {key}. Creating LegacyVersion({key})")
+                                v = LegacyVersion(key)
+
+                        # Add the version number to the list
+                        ver_list.append(v)
+
+                    # Create a new dictionary to map PEP 440 Version name back to keys for self.releases
+                    ver_dict = dict(zip(ver_list, self.releases.keys()))
+
+                    # Get a list of PEP 440 Versions and sort oldest to newest
+                    sorted_vers = sorted(ver_dict.keys())
+
+                    # Remove any pre-release and development packages (unless it is the last package)
+                    for v in sorted_vers:
+                        if v == sorted_vers[-1]:
+                            pass  # Do not remove the last version, no matter what type it is
+                        elif v.is_prerelease:
+                            sorted_vers.remove(v)
+                        elif v.is_devrelease:
+                            sorted_vers.remove(v)
+
+                    # Sanity check
+                    if len(sorted_vers) == 0:
+                        logger.error(f"Package {self.name} does not have any valid release versions")
+
+                    # Keep only the # most recent versions
+                    num_rel = 1
+                    filtered_releases = dict()
+                    for ver in sorted_vers[-num_rel:]:
+                        k = ver_dict.get(ver)
+                        v = self.releases.get(k)
+                        filtered_releases[k] = v
+
+                    # Replace original self.releases with new, shorter one
+                    self.releases = filtered_releases
 
                     self.sync_release_files()
                     self.sync_simple_page()
