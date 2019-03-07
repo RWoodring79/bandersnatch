@@ -154,7 +154,7 @@ class Package:
         """
         filter_plugins = filter_release_plugins()
         if not filter_plugins:
-            logger.info("No package filters are enabled. Skipping filtering")
+            logger.debug("No package filters are enabled. Skipping filtering")
             return
 
         # Make a copy of self.releases keys

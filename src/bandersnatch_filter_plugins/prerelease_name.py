@@ -22,7 +22,7 @@ class PreReleaseFilter(FilterReleasePlugin):
             re.compile(pattern_string) for pattern_string in self.PRERELEASE_PATTERNS
         ]
 
-        logger.info(f"Initialized prerelease plugin with {self.patterns}")
+        logger.debug(f"Initialized prerelease plugin with {self.patterns}")
 
     def check_match(self, name, version):
         """
