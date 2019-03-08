@@ -12,6 +12,7 @@ from urllib.parse import unquote, urlparse
 import pkg_resources
 import requests
 from packaging.utils import canonicalize_name
+from packaging.version import Version, LegacyVersion, InvalidVersion
 
 from . import utils
 from .filter import filter_release_plugins
@@ -125,14 +126,8 @@ class Package:
                             # Convert version string to PEP 440 version object
                             v = Version(key)
                         except InvalidVersion:
-                            # If not a PEP 440 Version, attempt to convert based on LegacyVersion format
-                            logger.warning(f"Invalid Version: {key}")
-                            try:
-                                v = LegacyVersion(key)
-                            except InvalidVersion:
-                                # Last resort, just make a LegacyVersion object based on the string
-                                logger.warning(f"Invalid Legacy Version: {key}. Creating LegacyVersion({key})")
-                                v = LegacyVersion(key)
+                            # If not a PEP 440 Version, store as a LegacyVersion
+                            v = LegacyVersion(key)
 
                         # Add the version number to the list
                         ver_list.append(v)
